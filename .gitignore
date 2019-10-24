@@ -1,0 +1,8 @@
+_NCrunch_DI
+.vs
+*.ncrunchsolution
+*.ncrunchsolution.*
+
+
+**/bin/**
+**/obj/**
