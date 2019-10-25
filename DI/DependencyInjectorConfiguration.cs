@@ -10,7 +10,7 @@ namespace DI
 
         public bool IsConfigured<TConfiguration>()
         {
-            return _typeSpecifications.ContainsKey(typeof(TConfiguration));
+            return IsConfigured(typeof(TConfiguration));
         }
 
         public void Configure<TConfiguration, TSpecification>()
@@ -35,6 +35,11 @@ namespace DI
             return IsConfigured<TConfiguration>() ? _typeSpecifications[typeof(TConfiguration)] : null;
         }
 
+        public Type GetSpecification(Type configurationType)
+        {
+            return IsConfigured(configurationType) ? _typeSpecifications[configurationType] : null;
+        }
+
         private bool IsValidConfiguration<TConfiguration, TSpecification>()
         {
             var configurationType = typeof(TConfiguration);
@@ -46,6 +51,11 @@ namespace DI
                     .Any((x => x == configurationType));
             }
             return specificationType == configurationType || specificationType.IsSubclassOf(configurationType);
+        }
+
+        public bool IsConfigured(Type configurationType)
+        {
+            return _typeSpecifications.ContainsKey(configurationType);
         }
     }
 }

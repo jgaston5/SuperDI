@@ -1,6 +1,9 @@
 namespace UnitTest.Models
 {
-    public class ComplexClass
+    public class ComplexClass : IComplexClass
     {
+        public ComplexClass(IBasicClass basicClass)
+        {
+        }
     }
 }

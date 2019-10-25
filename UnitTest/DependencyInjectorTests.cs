@@ -12,7 +12,7 @@ using UnitTest.Models;
  * create from class specification.
  * Create when there are no dependencies
  * Create when there is one depenedencey
- *
+ * Create when there is a functional param to pass in
  *
 
     Where to test that a specification must inherit the configuration type?
@@ -31,25 +31,41 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenCreate_WhenNonDependentClassIsSpecified_ThenCreatesClass()
+        public void GivenCreate_WhenConfigurationIsNotSpecified_ThenThrowsArgumentException()
+        {
+            var dependencyInjector = new DependencyInjector();
+
+            Assert.Throws<ArgumentException>(() => dependencyInjector.Create<IBasicClass>());
+        }
+
+        [Test]
+        public void GivenCreate_WhenConfigureInterfaceSpecifyBasicClass_ThenCreatesClass()
         {
             var dependencyInjector = new DependencyInjector(configuration =>
             {
                 configuration.Configure<IBasicClass, BasicClass>();
-                configuration.Configure<ComplexClass, ComplexClass>();
             });
 
             var basicClass = dependencyInjector.Create<IBasicClass>();
             Assert.NotNull(basicClass);
             Assert.AreEqual(typeof(BasicClass), basicClass.GetType());
-
-            var anotherBasicClass = dependencyInjector.Create<ComplexClass>();
-            Assert.NotNull(anotherBasicClass);
-            Assert.AreEqual(typeof(ComplexClass), anotherBasicClass.GetType());
         }
 
         [Test]
-        public void GivenCreate_WhenConfigurationIsDoubleSpecified_ThenCreatesLastSpecification()
+        public void GivenCreate_WhenConfigureBaseClassSpecifyBasicSubClass_ThenCreatesClass()
+        {
+            var dependencyInjector = new DependencyInjector(configuration =>
+            {
+                configuration.Configure<BasicClass, BasicSubClass>();
+            });
+
+            var result = dependencyInjector.Create<BasicClass>();
+            Assert.NotNull(result);
+            Assert.AreEqual(typeof(BasicSubClass), result.GetType());
+        }
+
+        [Test]
+        public void GivenCreate_WhenInterfaceConfigurationIsDoubleSpecified_ThenCreatesLastSpecification()
         {
             var dependencyInjector = new DependencyInjector(configuration =>
             {
@@ -63,11 +79,27 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenCreate_WhenConfigurationIsNotSpecified_ThenThrowsArgumentException()
+        public void GivenCreate_WhenSingleDependencyClassIsSpecifiedAndDependencyNotConfigured_ThenThrowsException()
         {
-            var dependencyInjector = new DependencyInjector();
+            var dependencyInjector = new DependencyInjector(configuration =>
+            {
+                configuration.Configure<ComplexClass, ComplexClass>();
+            });
 
-            Assert.Throws<ArgumentException>(() => dependencyInjector.Create<IBasicClass>());
+            Assert.Throws<ArgumentException>(() => dependencyInjector.Create<ComplexClass>());
+        }
+
+        [Test]
+        public void GivenCreate_WhenSingleDependencyClassIsSpecifiedAndDependencyIsConfigured_ThenCreatesClass()
+        {
+            var dependencyInjector = new DependencyInjector(configuration =>
+            {
+                configuration.Configure<IBasicClass, BasicClass>();
+                configuration.Configure<ComplexClass, ComplexClass>();
+            });
+
+            var result = dependencyInjector.Create<ComplexClass>();
+            Assert.NotNull(result);
         }
     }
 }
