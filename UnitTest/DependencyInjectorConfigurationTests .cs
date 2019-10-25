@@ -53,9 +53,9 @@ namespace UnitTest
             _target.Configure<IBasicClass, BasicClass>();
             _target.Configure<IBasicClass, ASecondBasicClass>();
 
-            var specification = _target.GetSpecification<IBasicClass>();
+            var specification = _target.GetInjectionSpecification<IBasicClass>();
             Assert.NotNull(specification);
-            Assert.AreEqual(typeof(ASecondBasicClass), specification);
+            Assert.AreEqual(typeof(ASecondBasicClass), specification.SpecificationType);
         }
 
         [Test]

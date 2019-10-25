@@ -13,6 +13,7 @@ using UnitTest.Models;
  * Create when there are no dependencies
  * Create when there is one depenedencey
  * Create when there is a functional param to pass in
+
  *
 
     Where to test that a specification must inherit the configuration type?
@@ -113,6 +114,18 @@ namespace UnitTest
             });
 
             var result = dependencyInjector.Create<IMoreComplexClass>();
+            Assert.NotNull(result);
+        }
+
+        [Test]
+        public void GivenCreate_WhenClassWithTwoConstructorsIsSpecifiedButNotConstructorInfoGiven_ThenUsesConstructorWithFewestParameters()
+        {
+            var dependencyInjector = new DependencyInjector(configuration =>
+            {
+                configuration.Configure<IMultiConstructorClass, MultiConstructorClass>();
+            });
+
+            var result = dependencyInjector.Create<IMultiConstructorClass>();
             Assert.NotNull(result);
         }
     }

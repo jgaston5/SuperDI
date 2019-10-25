@@ -23,17 +23,15 @@ namespace DI
         {
             if (_configuration.IsConfigured<TConfiguration>())
             {
-                var specificationType = _configuration.GetSpecification<TConfiguration>();
+                var specificationType = _configuration.GetInjectionSpecification<TConfiguration>();
                 return Create(specificationType);
             }
             throw new ArgumentException($"Type is not specified: ${typeof(TConfiguration)}");
         }
 
-        private object Create(Type specificationType)
+        private object Create(InjectionSpecification injectionSpecification)
         {
-            var constructors = specificationType.GetConstructors();
-
-            var constructor = GetSimplestConstructor(constructors);
+            var constructor = injectionSpecification.Constructor;
             var parameterInfos = constructor.GetParameters();
             object[] parameters = null;
 
@@ -49,22 +47,17 @@ namespace DI
             return constructor.Invoke(parameters);
         }
 
-        private ConstructorInfo GetSimplestConstructor(ConstructorInfo[] constructors)
-        {
-            return constructors[0];
-        }
-
         private object CreateParameter(ParameterInfo parameterInfo)
         {
             var parameterType = parameterInfo.ParameterType;
-            var parameterSpecificationType = _configuration.GetSpecification(parameterType);
+            var parameterInjectionSpecification = _configuration.GetInjectionSpecification(parameterType);
 
-            if (parameterSpecificationType == null)
+            if (parameterInjectionSpecification == null)
             {
                 throw new ArgumentException($"Dependency of {parameterType.Name} is not configured.");
             }
 
-            return Create(parameterSpecificationType);
+            return Create(parameterInjectionSpecification);
         }
     }
 }
