@@ -95,10 +95,24 @@ namespace UnitTest
             var dependencyInjector = new DependencyInjector(configuration =>
             {
                 configuration.Configure<IBasicClass, BasicClass>();
-                configuration.Configure<ComplexClass, ComplexClass>();
+                configuration.Configure<IComplexClass, ComplexClass>();
             });
 
-            var result = dependencyInjector.Create<ComplexClass>();
+            var result = dependencyInjector.Create<IComplexClass>();
+            Assert.NotNull(result);
+        }
+
+        [Test]
+        public void GivenCreate_WhenDoubleDependencyClassIsSpecifiedAndDependenciesAreConfigured_ThenCreatesClass()
+        {
+            var dependencyInjector = new DependencyInjector(configuration =>
+            {
+                configuration.Configure<IBasicClass, BasicClass>();
+                configuration.Configure<IComplexClass, ComplexClass>();
+                configuration.Configure<IMoreComplexClass, MoreComplexClass>();
+            });
+
+            var result = dependencyInjector.Create<IMoreComplexClass>();
             Assert.NotNull(result);
         }
     }
