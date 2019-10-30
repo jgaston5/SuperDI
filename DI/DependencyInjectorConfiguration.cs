@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace DI
 {
-    public class DependencyInjectorConfiguration
+    public class DependencyInjectorConfiguration : IDependencyInjectorConfiguration
     {
         private readonly Dictionary<Type, InjectionSpecification> _typeSpecifications = new Dictionary<Type, InjectionSpecification>();
 

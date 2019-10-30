@@ -6,27 +6,32 @@ namespace DI
 {
     public class DependencyInjector
     {
-        private readonly DependencyInjectorConfiguration _configuration;
+        private readonly IDependencyInjectorConfiguration _configuration;
 
         public DependencyInjector()
         {
             _configuration = new DependencyInjectorConfiguration();
         }
 
-        public DependencyInjector(Action<DependencyInjectorConfiguration> configure)
+        public DependencyInjector(Action<IDependencyInjectorConfiguration> configure)
         {
             _configuration = new DependencyInjectorConfiguration();
             configure(_configuration);
+        }
+
+        public DependencyInjector(IDependencyInjectorConfiguration configuration)
+        {
+            _configuration = configuration;
         }
 
         public object Create<TConfiguration>()
         {
             if (_configuration.IsConfigured<TConfiguration>())
             {
-                var specificationType = _configuration.GetInjectionSpecification<TConfiguration>();
-                return Create(specificationType);
+                var injectionSpecification = _configuration.GetInjectionSpecification<TConfiguration>();
+                return Create(injectionSpecification);
             }
-            throw new ArgumentException($"Type is not specified: ${typeof(TConfiguration)}");
+            throw new ArgumentException($"Type is not configured: ${typeof(TConfiguration)}");
         }
 
         private object Create(InjectionSpecification injectionSpecification)
@@ -50,12 +55,13 @@ namespace DI
         private object CreateParameter(ParameterInfo parameterInfo)
         {
             var parameterType = parameterInfo.ParameterType;
-            var parameterInjectionSpecification = _configuration.GetInjectionSpecification(parameterType);
 
-            if (parameterInjectionSpecification == null)
+            if (!_configuration.IsConfigured(parameterType))
             {
                 throw new ArgumentException($"Dependency of {parameterType.Name} is not configured.");
             }
+
+            var parameterInjectionSpecification = _configuration.GetInjectionSpecification(parameterType);
 
             return Create(parameterInjectionSpecification);
         }

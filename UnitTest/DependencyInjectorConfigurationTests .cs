@@ -5,19 +5,8 @@ using UnitTest.Models;
 
 /*
  *
- * Register interface/class
- *      class/class
- * If they duplicate a interface/class spec then override
- * create from interface specification
- * create from class specification.
- * Create when there are no dependencies
- * Create when there is one depenedencey
- *
- *
-
-    Where to test that a specification must inherit the configuration type?
-        would seem to be about the ConfigurationClass but that class is just used as an implementation feature...
- *
+ * Create when there is a functional param to pass in
+  *need to handle scoping - new dependency everytime it is called for (transient), shared for Create Call (scoped), single dependency for entire runtime of injector
  *
  */
 
@@ -48,7 +37,7 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenCreate_WhenConfigurationIsDoubleSpecified_ThenCreatesLastSpecification()
+        public void GivenCreate_WhenConfigurationIsDoubleSpecified_ThenReturnsLastSpecification()
         {
             _target.Configure<IBasicClass, BasicClass>();
             _target.Configure<IBasicClass, ASecondBasicClass>();
@@ -59,27 +48,36 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenConstructor_WhenSpecificationDoesNotInheritConfigurationInterface_ThenThrowsArgumentException()
+        public void GivenConfigure_WhenSpecificationDoesNotInheritConfigurationInterface_ThenThrowsArgumentException()
         {
             Assert.Throws<ArgumentException>(() => _target.Configure<IBasicClass, ComplexClass>());
         }
 
         [Test]
-        public void GivenConstructor_WhenSpecificationClassDoesNotInheritConfigurationClass_ThenThrowsArgumentException()
+        public void GivenConfigure_WhenSpecificationClassDoesNotInheritConfigurationClass_ThenThrowsArgumentException()
         {
             Assert.Throws<ArgumentException>(() => _target.Configure<BasicClass, ASecondBasicClass>());
         }
 
         [Test]
-        public void GivenConstructor_WhenSpecificationClassIsConfigurationClass_ThenDoesNotThrowArgumentException()
+        public void GivenConfigure_WhenSpecificationClassIsConfigurationClass_ThenDoesNotThrowArgumentException()
         {
             Assert.DoesNotThrow(() => _target.Configure<BasicClass, BasicClass>());
         }
 
         [Test]
-        public void GivenConstructor_WhenSpecificationClassIsSubClassOfConfigurationClass_ThenDoesNotThrowArgumentException()
+        public void GivenConfigure_WhenSpecificationClassIsSubClassOfConfigurationClass_ThenDoesNotThrowArgumentException()
         {
             Assert.DoesNotThrow(() => _target.Configure<BasicClass, BasicSubClass>());
+        }
+
+        [Test]
+        public void GivenConfigure_WhenClassWithTwoConstructorsIsSpecifiedButNotConstructorInfoGiven_ThenUsesConstructorWithFewestParameters()
+        {
+            _target.Configure<IMultiConstructorClass, MultiConstructorClass>();
+            var specification = _target.GetInjectionSpecification<IMultiConstructorClass>();
+            Assert.NotNull(specification);
+            Assert.AreEqual(0, specification.Constructor.GetParameters().Length);
         }
     }
 }
