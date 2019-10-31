@@ -14,36 +14,19 @@ namespace DI
             return IsConfigured(typeof(TConfiguration));
         }
 
-        public void Configure<TConfiguration, TSpecification>()
+        public void ConfigureTransient<TConfiguration, TSpecification>()
         {
-            if (!IsValidConfiguration<TConfiguration, TSpecification>())
-            {
-                throw new ArgumentException("The specification type does not inherit or implement the configuration type");
-            }
-
-            var specificationType = typeof(TSpecification);
-            var configurationType = typeof(TConfiguration);
-
-            if (IsConfigured<TConfiguration>())
-            {
-                _typeSpecifications[configurationType].SpecificationType = specificationType;
-                _typeSpecifications[configurationType].Constructor = GetSimplestConstructor(specificationType);
-            }
-            else
-            {
-                var injectionConfiguration = new InjectionSpecification
-                {
-                    ConfigurationType = configurationType,
-                    SpecificationType = specificationType,
-                    Constructor = GetSimplestConstructor(specificationType)
-                };
-                _typeSpecifications.Add(configurationType, injectionConfiguration);
-            }
+            Configure<TConfiguration, TSpecification>(ConfigurationScope.Transient);
         }
 
-        public InjectionSpecification GetInjectionSpecification<TConfiguration>()
+        public void ConfigureScoped<TConfiguration, TSpecification>()
         {
-            return IsConfigured<TConfiguration>() ? _typeSpecifications[typeof(TConfiguration)] : null;
+            Configure<TConfiguration, TSpecification>(ConfigurationScope.Scoped);
+        }
+
+        public void ConfigureSingleton<TConfiguration, TSpecification>()
+        {
+            Configure<TConfiguration, TSpecification>(ConfigurationScope.Singleton);
         }
 
         public InjectionSpecification GetInjectionSpecification(Type configurationType)
@@ -83,6 +66,34 @@ namespace DI
                 .OrderBy(x => x.Key)
                 .First()
                 .First();
+        }
+
+        private void Configure<TConfiguration, TSpecification>(ConfigurationScope scope)
+        {
+            if (!IsValidConfiguration<TConfiguration, TSpecification>())
+            {
+                throw new ArgumentException("The specification type does not inherit or implement the configuration type");
+            }
+
+            var specificationType = typeof(TSpecification);
+            var configurationType = typeof(TConfiguration);
+
+            if (IsConfigured<TConfiguration>())
+            {
+                _typeSpecifications[configurationType].SpecificationType = specificationType;
+                _typeSpecifications[configurationType].Constructor = GetSimplestConstructor(specificationType);
+            }
+            else
+            {
+                var injectionConfiguration = new InjectionSpecification
+                {
+                    ConfigurationType = configurationType,
+                    SpecificationType = specificationType,
+                    Constructor = GetSimplestConstructor(specificationType),
+                    ConfigurationScope = scope
+                };
+                _typeSpecifications.Add(configurationType, injectionConfiguration);
+            }
         }
     }
 }

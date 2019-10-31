@@ -10,5 +10,6 @@ namespace DI
         public Type ConfigurationType { get; set; }
         public Type SpecificationType { get; set; }
         public ConstructorInfo Constructor { get; set; }
+        public ConfigurationScope ConfigurationScope { get; set; }
     }
 }

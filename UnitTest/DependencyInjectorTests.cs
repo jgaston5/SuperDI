@@ -46,7 +46,7 @@ namespace UnitTest
         [Test]
         public void GivenCreate_WhenConfigureInterfaceSpecifyBasicClass_ThenCreatesClass()
         {
-            MockConfigure<IBasicClass, BasicClass>();
+            MockConfigureTransient<IBasicClass, BasicClass>();
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
             var basicClass = dependencyInjector.Create<IBasicClass>();
@@ -57,7 +57,7 @@ namespace UnitTest
         [Test]
         public void GivenCreate_WhenConfigureBaseClassSpecifyBasicSubClass_ThenCreatesClass()
         {
-            MockConfigure<BasicClass, BasicSubClass>();
+            MockConfigureTransient<BasicClass, BasicSubClass>();
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
             var result = dependencyInjector.Create<BasicClass>();
@@ -68,7 +68,7 @@ namespace UnitTest
         [Test]
         public void GivenCreate_WhenSingleDependencyClassIsSpecifiedAndDependencyNotConfigured_ThenThrowsException()
         {
-            MockConfigure<IComplexClass, ComplexClass>();
+            MockConfigureTransient<IComplexClass, ComplexClass>();
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
             try
@@ -86,8 +86,8 @@ namespace UnitTest
         [Test]
         public void GivenCreate_WhenSingleDependencyClassIsSpecifiedAndDependencyIsConfigured_ThenCreatesClass()
         {
-            MockConfigure<IBasicClass, BasicClass>();
-            MockConfigure<IComplexClass, ComplexClass>();
+            MockConfigureTransient<IBasicClass, BasicClass>();
+            MockConfigureTransient<IComplexClass, ComplexClass>();
 
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
@@ -98,9 +98,9 @@ namespace UnitTest
         [Test]
         public void GivenCreate_WhenDoubleDependencyClassIsSpecifiedAndDependenciesAreConfigured_ThenCreatesClass()
         {
-            MockConfigure<IBasicClass, BasicClass>();
-            MockConfigure<IComplexClass, ComplexClass>();
-            MockConfigure<IMoreComplexClass, MoreComplexClass>();
+            MockConfigureTransient<IBasicClass, BasicClass>();
+            MockConfigureTransient<IComplexClass, ComplexClass>();
+            MockConfigureTransient<IMoreComplexClass, MoreComplexClass>();
 
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
@@ -109,20 +109,19 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenCreate_WhenClassWithTwoConstructorsIsSpecifiedButNotConstructorInfoGiven_ThenUsesConstructorWithFewestParameters()
+        public void GivenCreate_WhenConfigureAsSingleton_ThenCreatesOneObjectForEntireDIFlow()
         {
-            var dependencyInjector = new DependencyInjector(configuration =>
-            {
-                configuration.Configure<IMultiConstructorClass, MultiConstructorClass>();
-            });
+            MockConfigureTransient<IBasicClass, BasicClass>(ConfigurationScope.Singleton);
+            var dependencyInjector = new DependencyInjector(_mockConfiguration);
 
-            var result = dependencyInjector.Create<IMultiConstructorClass>();
-            Assert.NotNull(result);
+            var result = dependencyInjector.Create<IBasicClass>();
+            var secondResult = dependencyInjector.Create<IBasicClass>();
+            Assert.AreEqual(result, secondResult);
         }
 
         #region helper
 
-        public void MockConfigure<TConfiguration, TSpecification>()
+        public void MockConfigureTransient<TConfiguration, TSpecification>(ConfigurationScope scope = ConfigurationScope.Transient)
         {
             var configurationType = typeof(TConfiguration);
             var specificationType = typeof(TSpecification);
@@ -130,13 +129,11 @@ namespace UnitTest
             {
                 ConfigurationType = configurationType,
                 SpecificationType = specificationType,
-                Constructor = specificationType.GetConstructors()[0]
+                Constructor = specificationType.GetConstructors()[0],
+                ConfigurationScope = scope
             };
 
-            A.CallTo(() => _mockConfiguration.IsConfigured<TConfiguration>()).Returns(true);
             A.CallTo(() => _mockConfiguration.IsConfigured(configurationType)).Returns(true);
-
-            A.CallTo(() => _mockConfiguration.GetInjectionSpecification<TConfiguration>()).Returns(injection);
             A.CallTo(() => _mockConfiguration.GetInjectionSpecification(configurationType)).Returns(injection);
         }
 

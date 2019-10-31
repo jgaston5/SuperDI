@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -7,6 +8,8 @@ namespace DI
     public class DependencyInjector
     {
         private readonly IDependencyInjectorConfiguration _configuration;
+
+        private Dictionary<Type, object> singletons = new Dictionary<Type, object>();
 
         public DependencyInjector()
         {
@@ -26,9 +29,10 @@ namespace DI
 
         public object Create<TConfiguration>()
         {
-            if (_configuration.IsConfigured<TConfiguration>())
+            var configurationType = typeof(TConfiguration);
+            if (_configuration.IsConfigured(configurationType))
             {
-                var injectionSpecification = _configuration.GetInjectionSpecification<TConfiguration>();
+                var injectionSpecification = _configuration.GetInjectionSpecification(configurationType);
                 return Create(injectionSpecification);
             }
             throw new ArgumentException($"Type is not configured: ${typeof(TConfiguration)}");
@@ -36,6 +40,12 @@ namespace DI
 
         private object Create(InjectionSpecification injectionSpecification)
         {
+            if (singletons.ContainsKey(injectionSpecification.SpecificationType) &&
+                injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton)
+            {
+                return singletons[injectionSpecification.SpecificationType];
+            }
+
             var constructor = injectionSpecification.Constructor;
             var parameterInfos = constructor.GetParameters();
             object[] parameters = null;
@@ -49,7 +59,12 @@ namespace DI
                 }
             }
 
-            return constructor.Invoke(parameters);
+            var result = constructor.Invoke(parameters);
+            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton)
+            {
+                singletons.Add(injectionSpecification.SpecificationType, result);
+            }
+            return result;
         }
 
         private object CreateParameter(ParameterInfo parameterInfo)

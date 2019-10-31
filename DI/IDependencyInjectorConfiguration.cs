@@ -4,11 +4,11 @@ namespace DI
 {
     public interface IDependencyInjectorConfiguration
     {
-        bool IsConfigured<TConfiguration>();
+        void ConfigureTransient<TConfiguration, TSpecification>();
 
-        void Configure<TConfiguration, TSpecification>();
+        void ConfigureScoped<TConfiguration, TSpecification>();
 
-        InjectionSpecification GetInjectionSpecification<TConfiguration>();
+        void ConfigureSingleton<TConfiguration, TSpecification>();
 
         InjectionSpecification GetInjectionSpecification(Type configurationType);
 

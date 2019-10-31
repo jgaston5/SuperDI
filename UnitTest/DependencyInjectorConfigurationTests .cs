@@ -3,18 +3,11 @@ using DI;
 using NUnit.Framework;
 using UnitTest.Models;
 
-/*
- *
- * Create when there is a functional param to pass in
-  *need to handle scoping - new dependency everytime it is called for (transient), shared for Create Call (scoped), single dependency for entire runtime of injector
- *
- */
-
 namespace UnitTest
 {
     public class DependencyInjectorConfigurationTests
     {
-        private DependencyInjectorConfiguration _target;
+        private IDependencyInjectorConfiguration _target;
 
         [SetUp]
         public void Setup()
@@ -23,59 +16,102 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenIsConfigured_WhenInterfaceNotConfigured_ThenReturnFalse()
+        public void GivenConfigureTransient_WhenInterfaceNotConfigured_ThenReturnFalse()
         {
-            Assert.False(_target.IsConfigured<IBasicClass>());
+            Assert.False(_target.IsConfigured(typeof(IBasicClass)));
         }
 
         [Test]
-        public void GivenIsConfigured_WhenInterfaceConfigured_ThenReturnTrue()
+        public void GivenConfigureTransient_WhenSpecificationClassIsConfigurationClass_ThenDoesNotThrowArgumentException()
         {
-            _target.Configure<IBasicClass, BasicClass>();
-
-            Assert.True(_target.IsConfigured<IBasicClass>());
+            Assert.DoesNotThrow(() => _target.ConfigureTransient<BasicClass, BasicClass>());
         }
 
         [Test]
-        public void GivenCreate_WhenConfigurationIsDoubleSpecified_ThenReturnsLastSpecification()
+        public void GivenConfigureTransient_WhenSpecificationClassIsSubClassOfConfigurationClass_ThenDoesNotThrowArgumentException()
         {
-            _target.Configure<IBasicClass, BasicClass>();
-            _target.Configure<IBasicClass, ASecondBasicClass>();
+            Assert.DoesNotThrow(() => _target.ConfigureTransient<BasicClass, BasicSubClass>());
+        }
 
-            var specification = _target.GetInjectionSpecification<IBasicClass>();
+        [Test]
+        public void GivenConfigureTransient_WhenSpecificationDoesNotInheritConfigurationInterface_ThenThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentException>(() => _target.ConfigureTransient<IBasicClass, ComplexClass>());
+        }
+
+        [Test]
+        public void GivenConfigureTransient_WhenSpecificationClassDoesNotInheritConfigurationClass_ThenThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentException>(() => _target.ConfigureTransient<BasicClass, ASecondBasicClass>());
+        }
+
+        [Test]
+        public void GivenConfigureTransient_WhenInterfaceConfigured_ThenIsConfiguredReturnTrue()
+        {
+            _target.ConfigureTransient<IBasicClass, BasicClass>();
+
+            Assert.True(_target.IsConfigured(typeof(IBasicClass)));
+        }
+
+        [Test]
+        public void GivenConfigureTransient_WhenConfigurationIsDoubleSpecified_ThenReturnsLastSpecification()
+        {
+            var configurationType = typeof(IBasicClass);
+            _target.ConfigureTransient<IBasicClass, BasicClass>();
+            _target.ConfigureTransient<IBasicClass, ASecondBasicClass>();
+
+            var specification = _target.GetInjectionSpecification(configurationType);
+
             Assert.NotNull(specification);
+            Assert.AreEqual(typeof(IBasicClass), specification.ConfigurationType);
             Assert.AreEqual(typeof(ASecondBasicClass), specification.SpecificationType);
+            Assert.AreEqual(ConfigurationScope.Transient, specification.ConfigurationScope);
         }
 
         [Test]
-        public void GivenConfigure_WhenSpecificationDoesNotInheritConfigurationInterface_ThenThrowsArgumentException()
+        public void GivenConfigureTransient_WhenConfigurationIsValid_ThenInjectionSpecificationIsTransient()
         {
-            Assert.Throws<ArgumentException>(() => _target.Configure<IBasicClass, ComplexClass>());
+            var configurationType = typeof(IBasicClass);
+
+            _target.ConfigureTransient<IBasicClass, BasicClass>();
+
+            var specification = _target.GetInjectionSpecification(configurationType);
+            Assert.NotNull(specification);
+            Assert.AreEqual(ConfigurationScope.Transient, specification.ConfigurationScope);
         }
 
         [Test]
-        public void GivenConfigure_WhenSpecificationClassDoesNotInheritConfigurationClass_ThenThrowsArgumentException()
+        public void GivenConfigureScoped_WhenConfigurationIsValid_ThenInjectionSpecificationIsScoped()
         {
-            Assert.Throws<ArgumentException>(() => _target.Configure<BasicClass, ASecondBasicClass>());
+            var configurationType = typeof(IBasicClass);
+
+            _target.ConfigureScoped<IBasicClass, BasicClass>();
+
+            var specification = _target.GetInjectionSpecification(configurationType);
+            Assert.NotNull(specification);
+            Assert.AreEqual(ConfigurationScope.Scoped, specification.ConfigurationScope);
         }
 
         [Test]
-        public void GivenConfigure_WhenSpecificationClassIsConfigurationClass_ThenDoesNotThrowArgumentException()
+        public void GivenConfigureSingleton_WhenConfigurationIsValid_ThenInjectionSpecificationIsSingleton()
         {
-            Assert.DoesNotThrow(() => _target.Configure<BasicClass, BasicClass>());
+            var configurationType = typeof(IBasicClass);
+
+            _target.ConfigureSingleton<IBasicClass, BasicClass>();
+
+            var specification = _target.GetInjectionSpecification(configurationType);
+            Assert.NotNull(specification);
+            Assert.AreEqual(ConfigurationScope.Singleton, specification.ConfigurationScope);
         }
 
         [Test]
-        public void GivenConfigure_WhenSpecificationClassIsSubClassOfConfigurationClass_ThenDoesNotThrowArgumentException()
+        public void GivenConfigureTransient_WhenClassWithTwoConstructorsIsSpecifiedButNotConstructorInfoGiven_ThenUsesConstructorWithFewestParameters()
         {
-            Assert.DoesNotThrow(() => _target.Configure<BasicClass, BasicSubClass>());
-        }
+            var configurationType = typeof(IMultiConstructorClass);
 
-        [Test]
-        public void GivenConfigure_WhenClassWithTwoConstructorsIsSpecifiedButNotConstructorInfoGiven_ThenUsesConstructorWithFewestParameters()
-        {
-            _target.Configure<IMultiConstructorClass, MultiConstructorClass>();
-            var specification = _target.GetInjectionSpecification<IMultiConstructorClass>();
+            _target.ConfigureTransient<IMultiConstructorClass, MultiConstructorClass>();
+
+            var specification = _target.GetInjectionSpecification(configurationType);
             Assert.NotNull(specification);
             Assert.AreEqual(0, specification.Constructor.GetParameters().Length);
         }
