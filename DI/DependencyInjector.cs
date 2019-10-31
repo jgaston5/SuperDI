@@ -9,7 +9,8 @@ namespace DI
     {
         private readonly IDependencyInjectorConfiguration _configuration;
 
-        private Dictionary<Type, object> singletons = new Dictionary<Type, object>();
+        private Dictionary<Type, object> _singletons = new Dictionary<Type, object>();
+        private Dictionary<Type, object> _scopedObjects = new Dictionary<Type, object>();
 
         public DependencyInjector()
         {
@@ -29,6 +30,7 @@ namespace DI
 
         public object Create<TConfiguration>()
         {
+            _scopedObjects = new Dictionary<Type, object>();
             var configurationType = typeof(TConfiguration);
             if (_configuration.IsConfigured(configurationType))
             {
@@ -40,10 +42,11 @@ namespace DI
 
         private object Create(InjectionSpecification injectionSpecification)
         {
-            if (singletons.ContainsKey(injectionSpecification.SpecificationType) &&
-                injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton)
+            var retrieveObject = GetPremadeObject(injectionSpecification);
+
+            if (retrieveObject != null)
             {
-                return singletons[injectionSpecification.SpecificationType];
+                return retrieveObject;
             }
 
             var constructor = injectionSpecification.Constructor;
@@ -60,10 +63,7 @@ namespace DI
             }
 
             var result = constructor.Invoke(parameters);
-            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton)
-            {
-                singletons.Add(injectionSpecification.SpecificationType, result);
-            }
+            StoreResult(injectionSpecification, result);
             return result;
         }
 
@@ -79,6 +79,36 @@ namespace DI
             var parameterInjectionSpecification = _configuration.GetInjectionSpecification(parameterType);
 
             return Create(parameterInjectionSpecification);
+        }
+
+        private object GetPremadeObject(InjectionSpecification injectionSpecification)
+        {
+            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton
+                && _singletons.ContainsKey(injectionSpecification.ConfigurationType))
+            {
+                return _singletons[injectionSpecification.ConfigurationType];
+            }
+
+            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Scoped
+                && _scopedObjects.ContainsKey(injectionSpecification.ConfigurationType))
+            {
+                return _scopedObjects[injectionSpecification.ConfigurationType];
+            }
+
+            return null;
+        }
+
+        private void StoreResult(InjectionSpecification injectionSpecification, object result)
+        {
+            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Singleton)
+            {
+                _singletons.Add(injectionSpecification.ConfigurationType, result);
+            }
+
+            if (injectionSpecification.ConfigurationScope == ConfigurationScope.Scoped)
+            {
+                _scopedObjects.Add(injectionSpecification.ConfigurationType, result);
+            }
         }
     }
 }

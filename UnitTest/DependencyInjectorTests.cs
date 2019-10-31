@@ -109,7 +109,7 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenCreate_WhenConfigureAsSingleton_ThenCreatesOneObjectForEntireDIFlow()
+        public void GivenCreate_WhenConfigureAsSingleton_ThenCreatesOneObjectForEntireDILifecycle()
         {
             MockConfigureTransient<IBasicClass, BasicClass>(ConfigurationScope.Singleton);
             var dependencyInjector = new DependencyInjector(_mockConfiguration);
@@ -117,6 +117,40 @@ namespace UnitTest
             var result = dependencyInjector.Create<IBasicClass>();
             var secondResult = dependencyInjector.Create<IBasicClass>();
             Assert.AreEqual(result, secondResult);
+        }
+
+        [Test]
+        public void GivenCreate_WhenConfigureAsScoped_ThenCreatesOneObjectForRequestFlow()
+        {
+            MockConfigureTransient<IBasicClass, BasicClass>(ConfigurationScope.Scoped);
+            MockConfigureTransient<IComplexClass, ComplexClass>(ConfigurationScope.Scoped);
+            MockConfigureTransient<IMoreComplexClass, MoreComplexClass>(ConfigurationScope.Scoped);
+
+            var dependencyInjector = new DependencyInjector(_mockConfiguration);
+
+            var moreComplexClass = (IMoreComplexClass)dependencyInjector.Create<IMoreComplexClass>();
+            var anotherMoreComplexClass = (IMoreComplexClass)dependencyInjector.Create<IMoreComplexClass>();
+
+            Assert.AreNotEqual(moreComplexClass, anotherMoreComplexClass);
+            Assert.AreNotEqual(moreComplexClass.MyBasicClass, anotherMoreComplexClass.MyBasicClass);
+            Assert.AreEqual(moreComplexClass.MyBasicClass, moreComplexClass.MyComplexClass.MyBasicClass);
+        }
+
+        [Test]
+        public void GivenCreate_WhenConfigureAsTransient_ThenCreatesNewObjectObjectEachTime()
+        {
+            MockConfigureTransient<IBasicClass, BasicClass>(ConfigurationScope.Transient);
+            MockConfigureTransient<IComplexClass, ComplexClass>(ConfigurationScope.Transient);
+            MockConfigureTransient<IMoreComplexClass, MoreComplexClass>(ConfigurationScope.Transient);
+
+            var dependencyInjector = new DependencyInjector(_mockConfiguration);
+
+            var moreComplexClass = (IMoreComplexClass)dependencyInjector.Create<IMoreComplexClass>();
+            var anotherMoreComplexClass = (IMoreComplexClass)dependencyInjector.Create<IMoreComplexClass>();
+
+            Assert.AreNotEqual(moreComplexClass, anotherMoreComplexClass);
+            Assert.AreNotEqual(moreComplexClass.MyBasicClass, anotherMoreComplexClass.MyBasicClass);
+            Assert.AreNotEqual(moreComplexClass.MyBasicClass, moreComplexClass.MyComplexClass.MyBasicClass);
         }
 
         #region helper
