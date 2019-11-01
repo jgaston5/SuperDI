@@ -5,11 +5,11 @@ using System.Reflection;
 
 namespace DI
 {
-    public class DependencyInjector
+    public class DependencyInjector : IDependencyInjector
     {
         private readonly IDependencyInjectorConfiguration _configuration;
+        private readonly IDictionary<Type, object> _singletons = new Dictionary<Type, object>();
 
-        private Dictionary<Type, object> _singletons = new Dictionary<Type, object>();
         private Dictionary<Type, object> _scopedObjects = new Dictionary<Type, object>();
 
         public DependencyInjector()
@@ -28,41 +28,53 @@ namespace DI
             _configuration = configuration;
         }
 
-        public object Create<TConfiguration>()
+        public TConfiguration Create<TConfiguration>()
         {
             _scopedObjects = new Dictionary<Type, object>();
             var configurationType = typeof(TConfiguration);
             if (_configuration.IsConfigured(configurationType))
             {
                 var injectionSpecification = _configuration.GetInjectionSpecification(configurationType);
-                return Create(injectionSpecification);
+                return (TConfiguration)Create(injectionSpecification);
             }
             throw new ArgumentException($"Type is not configured: ${typeof(TConfiguration)}");
         }
 
         private object Create(InjectionSpecification injectionSpecification)
         {
-            var retrieveObject = GetPremadeObject(injectionSpecification);
+            object result = GetPremadeObject(injectionSpecification);
 
-            if (retrieveObject != null)
+            if (result != null)
             {
-                return retrieveObject;
+                return result;
             }
 
-            var constructor = injectionSpecification.Constructor;
-            var parameterInfos = constructor.GetParameters();
-            object[] parameters = null;
-
-            if (parameterInfos.Length > 0)
+            switch (injectionSpecification.ConfigurationStyle)
             {
-                parameters = new object[parameterInfos.Length];
-                for (int i = 0; i < parameterInfos.Length; i++)
-                {
-                    parameters[i] = CreateParameter(parameterInfos[i]);
-                }
+                case ConfigurationStyle.ConstructorFunction:
+                    return injectionSpecification.ConstructorFunction();
+
+                case ConfigurationStyle.SpecificationType:
+                    var constructor = injectionSpecification.Constructor;
+                    var parameterInfos = constructor.GetParameters();
+                    object[] parameters = null;
+
+                    if (parameterInfos.Length > 0)
+                    {
+                        parameters = new object[parameterInfos.Length];
+                        for (int i = 0; i < parameterInfos.Length; i++)
+                        {
+                            parameters[i] = CreateParameter(parameterInfos[i]);
+                        }
+                    }
+
+                    result = constructor.Invoke(parameters);
+                    break;
+
+                default:
+                    throw new ArgumentException("Invalid configuration");
             }
 
-            var result = constructor.Invoke(parameters);
             StoreResult(injectionSpecification, result);
             return result;
         }

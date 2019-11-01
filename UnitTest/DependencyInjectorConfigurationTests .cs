@@ -16,10 +16,12 @@ namespace UnitTest
         }
 
         [Test]
-        public void GivenConfigureTransient_WhenInterfaceNotConfigured_ThenReturnFalse()
+        public void GivenIsConfigured_WhenInterfaceNotConfigured_ThenReturnFalse()
         {
             Assert.False(_target.IsConfigured(typeof(IBasicClass)));
         }
+
+        #region ConfigureSpecify
 
         [Test]
         public void GivenConfigureTransient_WhenSpecificationClassIsConfigurationClass_ThenDoesNotThrowArgumentException()
@@ -31,18 +33,6 @@ namespace UnitTest
         public void GivenConfigureTransient_WhenSpecificationClassIsSubClassOfConfigurationClass_ThenDoesNotThrowArgumentException()
         {
             Assert.DoesNotThrow(() => _target.ConfigureTransient<BasicClass, BasicSubClass>());
-        }
-
-        [Test]
-        public void GivenConfigureTransient_WhenSpecificationDoesNotInheritConfigurationInterface_ThenThrowsArgumentException()
-        {
-            Assert.Throws<ArgumentException>(() => _target.ConfigureTransient<IBasicClass, ComplexClass>());
-        }
-
-        [Test]
-        public void GivenConfigureTransient_WhenSpecificationClassDoesNotInheritConfigurationClass_ThenThrowsArgumentException()
-        {
-            Assert.Throws<ArgumentException>(() => _target.ConfigureTransient<BasicClass, ASecondBasicClass>());
         }
 
         [Test]
@@ -115,5 +105,59 @@ namespace UnitTest
             Assert.NotNull(specification);
             Assert.AreEqual(0, specification.Constructor.GetParameters().Length);
         }
+
+        #endregion ConfigureSpecify
+
+        #region ConstructorFunctions
+
+        [Test]
+        public void GivenConfigureTransient_WhenConfigurationIsConstructorFunction_ThenInjectionSpecificationIsTransient()
+        {
+            var configurationType = typeof(IBasicClass);
+            var sepecificationType = typeof(BasicClass);
+            _target.ConfigureTransient<IBasicClass, BasicClass>(() => new BasicClass());
+            var specification = _target.GetInjectionSpecification(configurationType);
+
+            Assert.NotNull(specification);
+            Assert.AreEqual(configurationType, specification.ConfigurationType);
+            Assert.AreEqual(sepecificationType, specification.SpecificationType);
+            Assert.AreEqual(ConfigurationScope.Transient, specification.ConfigurationScope);
+            Assert.AreEqual(ConfigurationStyle.ConstructorFunction, specification.ConfigurationStyle);
+            Assert.NotNull(specification.ConstructorFunction);
+        }
+
+        [Test]
+        public void GivenConfigureScoped_WhenConfigurationIsIsConstructorFunction_ThenInjectionSpecificationIsScoped()
+        {
+            var configurationType = typeof(IBasicClass);
+            var sepecificationType = typeof(BasicClass);
+            _target.ConfigureScoped<IBasicClass, BasicClass>(() => new BasicClass());
+            var specification = _target.GetInjectionSpecification(configurationType);
+
+            Assert.NotNull(specification);
+            Assert.AreEqual(configurationType, specification.ConfigurationType);
+            Assert.AreEqual(sepecificationType, specification.SpecificationType);
+            Assert.AreEqual(ConfigurationScope.Scoped, specification.ConfigurationScope);
+            Assert.AreEqual(ConfigurationStyle.ConstructorFunction, specification.ConfigurationStyle);
+            Assert.NotNull(specification.ConstructorFunction);
+        }
+
+        [Test]
+        public void GivenConfigureSingleton_WhenConfigurationIsConstructorFunction_ThenInjectionSpecificationIsSingleton()
+        {
+            var configurationType = typeof(IBasicClass);
+            var sepecificationType = typeof(BasicClass);
+            _target.ConfigureSingleton<IBasicClass, BasicClass>(() => new BasicClass());
+            var specification = _target.GetInjectionSpecification(configurationType);
+
+            Assert.NotNull(specification);
+            Assert.AreEqual(configurationType, specification.ConfigurationType);
+            Assert.AreEqual(sepecificationType, specification.SpecificationType);
+            Assert.AreEqual(ConfigurationScope.Singleton, specification.ConfigurationScope);
+            Assert.AreEqual(ConfigurationStyle.ConstructorFunction, specification.ConfigurationStyle);
+            Assert.NotNull(specification.ConstructorFunction);
+        }
+
+        #endregion ConstructorFunctions
     }
 }

@@ -14,37 +14,45 @@ namespace DI
             return IsConfigured(typeof(TConfiguration));
         }
 
-        public void ConfigureTransient<TConfiguration, TSpecification>()
+        public void ConfigureTransient<TConfiguration, TSpecification>(Func<TConfiguration> constructorFunction = null) where TSpecification : TConfiguration
         {
-            Configure<TConfiguration, TSpecification>(ConfigurationScope.Transient);
+            if (constructorFunction != null)
+            {
+                Configure<TConfiguration, TSpecification>(constructorFunction, ConfigurationScope.Transient);
+            }
+            else
+            {
+                Configure<TConfiguration, TSpecification>(ConfigurationScope.Transient);
+            }
         }
 
-        public void ConfigureScoped<TConfiguration, TSpecification>()
+        public void ConfigureScoped<TConfiguration, TSpecification>(Func<TConfiguration> constructorFunction = null) where TSpecification : TConfiguration
         {
-            Configure<TConfiguration, TSpecification>(ConfigurationScope.Scoped);
+            if (constructorFunction != null)
+            {
+                Configure<TConfiguration, TSpecification>(constructorFunction, ConfigurationScope.Scoped);
+            }
+            else
+            {
+                Configure<TConfiguration, TSpecification>(ConfigurationScope.Scoped);
+            }
         }
 
-        public void ConfigureSingleton<TConfiguration, TSpecification>()
+        public void ConfigureSingleton<TConfiguration, TSpecification>(Func<TConfiguration> constructorFunction = null) where TSpecification : TConfiguration
         {
-            Configure<TConfiguration, TSpecification>(ConfigurationScope.Singleton);
+            if (constructorFunction != null)
+            {
+                Configure<TConfiguration, TSpecification>(constructorFunction, ConfigurationScope.Singleton);
+            }
+            else
+            {
+                Configure<TConfiguration, TSpecification>(ConfigurationScope.Singleton);
+            }
         }
 
         public InjectionSpecification GetInjectionSpecification(Type configurationType)
         {
             return IsConfigured(configurationType) ? _typeSpecifications[configurationType] : null;
-        }
-
-        private bool IsValidConfiguration<TConfiguration, TSpecification>()
-        {
-            var configurationType = typeof(TConfiguration);
-            var specificationType = typeof(TSpecification);
-
-            if (configurationType.IsInterface)
-            {
-                return specificationType.GetInterfaces()
-                    .Any((x => x == configurationType));
-            }
-            return specificationType == configurationType || specificationType.IsSubclassOf(configurationType);
         }
 
         public bool IsConfigured(Type configurationType)
@@ -57,8 +65,9 @@ namespace DI
         /// </summary>
         /// <param name="constructors"></param>
         /// <returns></returns>
-        private ConstructorInfo GetSimplestConstructor(Type specificationType)
+        private ConstructorInfo GetSimplestConstructor<TSpecification>()
         {
+            var specificationType = typeof(TSpecification);
             var constructors = specificationType.GetConstructors();
 
             return constructors
@@ -68,32 +77,57 @@ namespace DI
                 .First();
         }
 
-        private void Configure<TConfiguration, TSpecification>(ConfigurationScope scope)
+        private void Configure<TConfiguration, TSpecification>(ConfigurationScope scope) where TSpecification : TConfiguration
         {
-            if (!IsValidConfiguration<TConfiguration, TSpecification>())
+            var injectionSpecification =
+                GetNewInjectionSpecification<TConfiguration, TSpecification>(scope,
+                    ConfigurationStyle.SpecificationType);
+
+            injectionSpecification.Constructor = GetSimplestConstructor<TSpecification>();
+
+            StoreInjectionSpecification(injectionSpecification);
+        }
+
+        private void Configure<TConfiguration, TSpecification>(Func<TConfiguration> constructorFunction, ConfigurationScope scope) where TSpecification : TConfiguration
+        {
+            if (constructorFunction == null)
             {
-                throw new ArgumentException("The specification type does not inherit or implement the configuration type");
+                throw new ArgumentException("Constructor function cannot be null.");
             }
+            var injectionSpecification =
+                GetNewInjectionSpecification<TConfiguration, TSpecification>(scope,
+                    ConfigurationStyle.ConstructorFunction);
 
-            var specificationType = typeof(TSpecification);
-            var configurationType = typeof(TConfiguration);
+            injectionSpecification.ConstructorFunction = constructorFunction();
 
-            if (IsConfigured<TConfiguration>())
+            StoreInjectionSpecification(injectionSpecification);
+        }
+
+        private void StoreInjectionSpecification(InjectionSpecification injectionSpecification)
+        {
+            if (IsConfigured(injectionSpecification.ConfigurationType))
             {
-                _typeSpecifications[configurationType].SpecificationType = specificationType;
-                _typeSpecifications[configurationType].Constructor = GetSimplestConstructor(specificationType);
+                _typeSpecifications[injectionSpecification.ConfigurationType] = injectionSpecification;
             }
             else
             {
-                var injectionConfiguration = new InjectionSpecification
-                {
-                    ConfigurationType = configurationType,
-                    SpecificationType = specificationType,
-                    Constructor = GetSimplestConstructor(specificationType),
-                    ConfigurationScope = scope
-                };
-                _typeSpecifications.Add(configurationType, injectionConfiguration);
+                _typeSpecifications.Add(injectionSpecification.ConfigurationType, injectionSpecification);
             }
+        }
+
+        private InjectionSpecification GetNewInjectionSpecification<TConfiguration, TSpecification>(ConfigurationScope scope, ConfigurationStyle style)
+        {
+            var configurationType = typeof(TConfiguration);
+            var specificationType = typeof(TSpecification);
+            var injectionSpecification = new InjectionSpecification
+            {
+                ConfigurationType = configurationType,
+                SpecificationType = specificationType,
+                ConfigurationScope = scope,
+                ConfigurationStyle = style,
+            };
+
+            return injectionSpecification;
         }
     }
 }
